@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightware Excel Processor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #007acc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9ff;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #005c99;
+            background-color: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #005c99;
+            background-color: #e6f3ff;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-text {
+            color: #007acc;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-subtext {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .process-btn {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .process-btn:hover:not(:disabled) {
+            background-color: #005c99;
+        }
+        
+        .process-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .file-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .download-link {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .download-link:hover {
+            background-color: #218838;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .mapping-info {
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .mapping-info h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .mapping-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .mapping-list li {
+            margin-bottom: 5px;
+            padding: 5px 0;
+        }
+        
+        .mapping-arrow {
+            color: #007acc;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lightware Excel Processor</h1>
+        <p class="subtitle">Convert Lightware price lists to Q360 format</p>
+        
+        <div class="mapping-info">
+            <h3>Data Mapping</h3>
+            <ul class="mapping-list">
+                <li>Part number <span class="mapping-arrow">→</span> MASTERNO</li>
+                <li>Product name <span class="mapping-arrow">→</span> PARTNO</li>
+                <li>Description <span class="mapping-arrow">→</span> DESCRIPTION</li>
+                <li>PSNI PARTNER COST <span class="mapping-arrow">→</span> STANDARDCOST</li>
+                <li>MSRP USD <span class="mapping-arrow">→</span> MSRP</li>
+                <li>Brand: Always set to "Lightware"</li>
+                <li>TAXABLE & USETAXFLAG: Always set to "Y"</li>
+            </ul>
+            <p><strong>Note:</strong> Rows with non-numeric PSNI PARTNER COST values will be excluded.</p>
+            <p><strong>File Requirements:</strong></p>
+            <ul style="font-size: 12px; margin: 10px 0; padding-left: 20px;">
+                <li>Must be a .xlsx Excel file</li>
+                <li>Must contain columns: Part number, Product name, Description, MSRP USD, PSNI PARTNER COST</li>
+                <li>Headers should be in the first few rows of the spreadsheet</li>
+                <li>Use the same format as Lightware Americas price list files</li>
+            </ul>
+        </div>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" class="file-input" accept=".xlsx" />
+            <div class="upload-text">📁 Click to select Lightware Excel file</div>
+            <div class="upload-subtext">or drag and drop your .xlsx file here</div>
+        </div>
+        
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
+        
+        <button id="processBtn" class="process-btn" onclick="processFile()" disabled>Process File</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        let uploadedFile = null;
+        const template = {
+            // This will be populated with the template structure
+            headers: [
+                'MASTERNO', 'ITEMTYPE', 'PARTNO', 'ALTPARTNO', 'DESCRIPTION', 'COMMENT', 'MSTKLOC', 'PRODUNITS', 'MANUFACTURER', 'TAXABLE', 'USETAXFLAG', 'AUTOPICKFLAG', 'AUTOPRODUCTFLAG', 'WARRANTYFLAG', 'RMRTERM', 'SPECIALORDERFLAG', 'MASTERGROUP', 'CLASS', 'STANDARDCOST', 'MSRP', 'PRICEA', 'PRICEAFACTOR', 'PRICEB', 'PRICEBFACTOR', 'PRICEC', 'PRICECFACTOR', 'PRICED', 'PRICEDFACTOR', 'QTYMIN', 'QTYMAX', 'QTYREORDER', 'USER1', 'USER2', 'USER3', 'USER4', 'USER5', 'USER6', 'USER7', 'USER8', 'USER9', 'USER10'
+            ]
+        };
+
+        // File upload handling
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const processBtn = document.getElementById('processBtn');
+        const status = document.getElementById('status');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file.name.endsWith('.xlsx')) {
+                showStatus('Please select an Excel (.xlsx) file.', 'error');
+                return;
+            }
+
+            uploadedFile = file;
+            fileInfo.innerHTML = `
+                <strong>Selected file:</strong> ${file.name}<br>
+                <strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                <strong>Last modified:</strong> ${new Date(file.lastModified).toLocaleString()}
+            `;
+            fileInfo.style.display = 'block';
+            processBtn.disabled = false;
+            hideStatus();
+        }
+
+        function processFile() {
+            if (!uploadedFile) {
+                showStatus('Please select a file first.', 'error');
+                return;
+            }
+
+            showStatus('Processing file...', 'info');
+            processBtn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // Check if we have the expected sheet structure
+                    if (workbook.SheetNames.length === 0) {
+                        throw new Error('No sheets found in the Excel file.');
+                    }
+
+                    // Use the first (and apparently only) sheet based on our analysis
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Try to find the header row dynamically
+                    let headerRowIndex = -1;
+                    let headers = [];
+                    
+                    // Look for the row containing "Part number"
+                    for (let row = 0; row <= 5; row++) { // Check first 6 rows
+                        for (let col = 0; col <= 10; col++) { // Check first 11 columns
+                            const cell = worksheet[XLSX.utils.encode_cell({r: row, c: col})];
+                            if (cell && cell.v && String(cell.v).toLowerCase().includes('part number')) {
+                                headerRowIndex = row;
+                                break;
+                            }
+                        }
+                        if (headerRowIndex !== -1) break;
+                    }
+                    
+                    if (headerRowIndex === -1) {
+                        throw new Error('Could not find header row containing "Part number". Please verify your Excel file structure.');
+                    }
+                    
+                    console.log(`Found header row at index: ${headerRowIndex}`);
+                    
+                    // Extract headers from the found row
+                    const headerRange = XLSX.utils.decode_range(worksheet['!ref']);
+                    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+                        const headerCell = worksheet[XLSX.utils.encode_cell({r: headerRowIndex, c: col})];
+                        headers.push(headerCell ? String(headerCell.v).trim() : '');
+                    }
+                    
+                    console.log('Extracted headers:', headers);
+                    
+                    // Get data starting from the row after headers
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                        range: headerRowIndex + 1, // Start from row after headers
+                        header: headers, // Use the headers we extracted
+                        defval: '' // Default value for empty cells
+                    });
+
+                    console.log('Parsed data sample:', jsonData.slice(0, 3)); // Debug: show first 3 rows
+
+                    if (jsonData.length === 0) {
+                        throw new Error('No data found in the Excel file. Please check that your file has data starting from row 4.');
+                    }
+
+                    // Check for required columns
+                    const firstRow = jsonData[0];
+                    const availableColumns = Object.keys(firstRow);
+                    console.log('Available columns:', availableColumns);
+                    
+                    const requiredColumns = ['Part number', 'Product name', 'Description', 'MSRP USD', 'PSNI PARTNER COST'];
+                    const missingColumns = requiredColumns.filter(col => !availableColumns.includes(col));
+                    
+                    if (missingColumns.length > 0) {
+                        console.error('Column mismatch details:');
+                        console.error('Required:', requiredColumns);
+                        console.error('Available:', availableColumns);
+                        console.error('Missing:', missingColumns);
+                        
+                        throw new Error(`Missing required columns: ${missingColumns.join(', ')}\n\nAvailable columns: ${availableColumns.join(', ')}\n\nPlease verify your Excel file has the correct structure with headers in row 3.`);
+                    }
+
+                    // Filter and process data
+                    const processedData = processLightwareData(jsonData);
+                    const outputWorkbook = createOutputWorkbook(processedData);
+                    
+                    // Generate download link
+                    const excelBuffer = XLSX.write(outputWorkbook, {bookType: 'xlsx', type: 'array'});
+                    const blob = new Blob([excelBuffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                    const url = URL.createObjectURL(blob);
+                    
+                    const now = new Date();
+                    const timestamp = now.getFullYear() + 
+                        String(now.getMonth() + 1).padStart(2, '0') + 
+                        String(now.getDate()).padStart(2, '0') + '_' +
+                        String(now.getHours()).padStart(2, '0') +
+                        String(now.getMinutes()).padStart(2, '0');
+                    
+                    const filename = `Lightware_Q360_${timestamp}.xlsx`;
+                    
+                    showStatus(`
+                        <strong>Processing complete!</strong><br>
+                        Processed ${processedData.validRows} rows (${processedData.excludedRows} rows excluded due to invalid cost data)<br>
+                        <a href="${url}" download="${filename}" class="download-link">📥 Download ${filename}</a>
+                    `, 'success');
+
+                } catch (error) {
+                    console.error('Processing error details:', error);
+                    console.error('File name:', uploadedFile.name);
+                    console.error('File size:', uploadedFile.size);
+                    
+                    let errorMessage = `Error processing file: ${error.message}`;
+                    
+                    if (error.message.includes('Missing required columns')) {
+                        errorMessage += `<br><br><strong>Troubleshooting Tips:</strong><br>
+                        1. Open your file in Excel and verify the column headers<br>
+                        2. Make sure headers are exactly: "Part number", "Product name", "Description", "MSRP USD", "PSNI PARTNER COST"<br>
+                        3. Check that there are no extra spaces in column names<br>
+                        4. Open browser Developer Tools (F12) and check the Console for detailed error information`;
+                    }
+                    
+                    showStatus(errorMessage, 'error');
+                } finally {
+                    processBtn.disabled = false;
+                }
+            };
+
+            reader.onerror = function() {
+                showStatus('Error reading file.', 'error');
+                processBtn.disabled = false;
+            };
+
+            reader.readAsArrayBuffer(uploadedFile);
+        }
+
+        function processLightwareData(jsonData) {
+            const validRows = [];
+            let excludedCount = 0;
+
+            for (const row of jsonData) {
+                // Check if PSNI PARTNER COST is a valid number
+                const cost = parseFloat(row['PSNI PARTNER COST']);
+                
+                if (isNaN(cost) || row['PSNI PARTNER COST'] === '' || row['PSNI PARTNER COST'] == null) {
+                    excludedCount++;
+                    continue;
+                }
+
+                // Check for other required fields
+                if (!row['Part number'] || !row['Product name'] || !row['Description'] || !row['MSRP USD']) {
+                    excludedCount++;
+                    continue;
+                }
+
+                // Map the data according to requirements
+                const mappedRow = {};
+                
+                // Initialize all template columns
+                template.headers.forEach(header => {
+                    mappedRow[header] = '';
+                });
+
+                // Apply mappings
+                mappedRow['MASTERNO'] = String(row['Part number']);
+                mappedRow['PARTNO'] = String(row['Product name']);
+                mappedRow['DESCRIPTION'] = String(row['Description']);
+                mappedRow['STANDARDCOST'] = parseFloat(row['PSNI PARTNER COST']);
+                mappedRow['MSRP'] = parseFloat(row['MSRP USD']);
+                mappedRow['MANUFACTURER'] = 'Lightware';
+                mappedRow['TAXABLE'] = 'Y';
+                mappedRow['USETAXFLAG'] = 'Y';
+
+                validRows.push(mappedRow);
+            }
+
+            return {
+                validRows,
+                excludedRows: excludedCount
+            };
+        }
+
+        function createOutputWorkbook(processedData) {
+            // Create worksheet with template headers and processed data
+            const wsData = [template.headers];
+            
+            processedData.validRows.forEach(row => {
+                const rowArray = template.headers.map(header => row[header] || '');
+                wsData.push(rowArray);
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+            return workbook;
+        }
+
+        function showStatus(message, type) {
+            status.innerHTML = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
