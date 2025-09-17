@@ -1,0 +1,16 @@
+# GitHub Pages configuration
+# This file ensures GitHub Pages serves the site correctly
+
+# Build settings
+plugins:
+  - jekyll-relative-links
+
+# Relative links settings
+relative_links:
+  enabled: true
+  collections: true
+
+# Include the HTML file
+include:
+  - index.html
+  - README.md
