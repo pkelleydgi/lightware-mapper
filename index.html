@@ -11,7 +11,7 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #173B69;
         }
         
         .container {
@@ -174,30 +174,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>Lightware Excel Processor</h1>
-        <p class="subtitle">Convert Lightware price lists to Q360 format</p>
-        
-        <div class="mapping-info">
-            <h3>Data Mapping</h3>
-            <ul class="mapping-list">
-                <li>Part number <span class="mapping-arrow">→</span> MASTERNO</li>
-                <li>Product name <span class="mapping-arrow">→</span> PARTNO</li>
-                <li>Description <span class="mapping-arrow">→</span> DESCRIPTION</li>
-                <li>PSNI PARTNER COST <span class="mapping-arrow">→</span> STANDARDCOST</li>
-                <li>MSRP USD <span class="mapping-arrow">→</span> MSRP</li>
-                <li>Brand: Always set to "Lightware"</li>
-                <li>TAXABLE & USETAXFLAG: Always set to "Y"</li>
-            </ul>
-            <p><strong>Note:</strong> Rows with non-numeric PSNI PARTNER COST values will be excluded.</p>
-            <p><strong>File Requirements:</strong></p>
-            <ul style="font-size: 12px; margin: 10px 0; padding-left: 20px;">
-                <li>Must be a .xlsx Excel file</li>
-                <li>Must contain columns: Part number, Product name, Description, MSRP USD, PSNI PARTNER COST</li>
-                <li>Headers should be in the first few rows of the spreadsheet</li>
-                <li>Use the same format as Lightware Americas price list files</li>
-            </ul>
-        </div>
-        
+        <h1>Lightware to Q360 Data Mapper</h1>
+        <p class="subtitle">Converts Lightware Pricelist to Q360 Friendly Format</p>
+                     
         <div class="upload-area" onclick="document.getElementById('fileInput').click()">
             <input type="file" id="fileInput" class="file-input" accept=".xlsx" />
             <div class="upload-text">📁 Click to select Lightware Excel file</div>
